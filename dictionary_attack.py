@@ -52,7 +52,7 @@ if __name__ == "__main__":
         for hash_data in hashes_data:
             if Path(hash_data).is_file():
                 with open(hash_data, 'r') as file:
-                    hashes.extend([hash.lower for hash in file.read().split('\n')])
+                    hashes.extend([hash.lower() for hash in file.read().split('\n')])
             else:
                 hashes.append(hash_data.lower())
     display(':', f"Hashes Loaded = {len(hashes)}")
@@ -69,6 +69,7 @@ if __name__ == "__main__":
     wordlists = data.load.split(',')
     cracked_hashes = {}
     hashes_calculated = 0
+    print(hashes)
     display(':', f"Total Wordlists = {Back.MAGENTA}{len(wordlists)}{Back.RESET}")
     for file_index, wordlist in enumerate(wordlists):
         try:
