@@ -22,12 +22,7 @@ It takes the following command line arguments:
 * '-H', "--hash": Hashes/Hash Files to Load (seperated by ',')
 * '-a', "--hashing-algorithm": Hashing Algorithm (md5,sha1,sha224,sha256,sha384,sha3_224,sha3_256,sha3_384,sha3_512,sha512)
 * '-w', "--write": "Name of the File for the data to be dumped (default=current data and time)"
-
-## Output
-It saves the output to the file as per the following format:
-```python
-{hash}:{word}
-```
+* '-t', "--save-type": File type to dump the data into (text, csv, json, pickle, Default=text)
 
 ### Note
 For Large Wordlists, the program may give memory error as it may not be able to load all the passwords at once into the memory. To overcome this, we can use *split* command in linux to split the Wordlist into smaller files. <br />
