@@ -69,7 +69,6 @@ if __name__ == "__main__":
     wordlists = data.load.split(',')
     cracked_hashes = {}
     hashes_calculated = 0
-    print(hashes)
     display(':', f"Total Wordlists = {Back.MAGENTA}{len(wordlists)}{Back.RESET}")
     for file_index, wordlist in enumerate(wordlists):
         try:
