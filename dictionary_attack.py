@@ -36,11 +36,13 @@ hash_algorithms = {
     "sha3_512" : hashlib.sha3_512,
     "sha512" : hashlib.sha512,
 }
+number_of_hashes = 10000000
 
 if __name__ == "__main__":
     data = get_arguments(('-l', "--load", "load", "List of Wordlists (seperated by ',')"),
                          ('-H', "--hash", "hash", "Hashes/Hash Files to Load (seperated by ',')"),
                          ('-a', "--hashing-algorithm", "hashing_algorithm", f"Hashing Algorithm ({','.join(hash_algorithms.keys())})"),
+                         ('-n', "--hashes", "number_of_hashes", f"Number of Hashes to load from a file at one time if the file is large enough that it can't be read at once (Default={number_of_hashes})"),
                          ('-w', "--write", "write", "Name of the File for the data to be dumped (default=current data and time)"),
                          ('-t', "--save-type", "save_type", "File type to dump the data into (text, csv, json, pickle, Default=text)"))
     if not data.hash:
@@ -64,6 +66,10 @@ if __name__ == "__main__":
     if not data.load:
         display('-', "Please specifiy Wordlists to Load!")
         exit(0)
+    if not data.number_of_hashes:
+        data.number_of_hashes = number_of_hashes
+    else:
+        data.number_of_hashes = int(data.number_of_hashes)
     if not data.write:
         data.write = f"{date.today()} {strftime('%H_%M_%S', localtime())}"
     wordlists = data.load.split(',')
@@ -78,6 +84,50 @@ if __name__ == "__main__":
         except FileNotFoundError:
             display('-', f"File {Back.YELLOW}{wordlist}{Back.RESET} not found!")
             continue
+        except MemoryError:
+            display('-', f"File {Back.MAGENTA}{wordlist}{Back.RESET} too big to load!")
+            display(':', f"Loading {Back.MAGENTA}{data.number_of_hashes}{Back.RESET} words at once from the file.")
+            with open(wordlist, 'rb') as file:
+                done = False
+                words_loaded = 0
+                current_file_cracked_hashes = 0
+                while not done:
+                    current_words_loaded = 0
+                    words = {}
+                    current_hashes = {}
+                    t1 = time()
+                    while len(words) < data.number_of_hashes and not done:
+                        word = file.readline().decode(errors="ignore")
+                        if word == '':
+                            done = True
+                        word = word.replace('\n', '')
+                        words[hash_algorithms[data.hashing_algorithm](word.encode()).hexdigest()] = word
+                        current_words_loaded += 1
+                        display('*', f"Hashes Calculated = {Back.MAGENTA}{current_words_loaded}{Back.RESET}", start='\r', end='')
+                    t2 = time()
+                    words_loaded += current_words_loaded
+                    display('+', "Done Calculating Hashes", start='\n')
+                    display(':', f"\tHashes Calculated = {Back.MAGENTA}{current_words_loaded}{Back.RESET}")
+                    display(':', f"\tTime Taken = {Back.MAGENTA}{t2-t1:.2f} seconds{Back.RESET}")
+                    display(':', f"\tRate = {Back.MAGENTA}{current_words_loaded/(t2-t1):.2f} hashes/second{Back.RESET}")
+                    display(':', f"Comparing Calculated Hashes...")
+                    current_cracked_hashes = 0
+                    t1 = time()
+                    for hash_index, hash in enumerate(hashes):
+                        if hash in words.keys():
+                            cracked_hashes[hash] = words[hash]
+                            current_cracked_hashes += 1
+                        display(':', f"Hashes Compared = {Back.MAGENTA}{hash_index+1}/{len(hashes)} ({(hash_index+1)/len(hashes)*100:.2f}%){Back.RESET}", start='\r', end='')
+                    t2 = time()
+                    display('+', "Done Comparing Hashes", start='\n')
+                    display(':', f"\tTime Taken = {Back.MAGENTA}{t2-t1:.2f}{Back.RESET} seconds")
+                    display(':', f"\tHashes Cracked from Current Batch = {Back.MAGENTA}{current_cracked_hashes}{Back.RESET}")
+                    current_file_cracked_hashes += current_cracked_hashes
+                display(':', f"\tHashes Cracked from Current file = {Back.MAGENTA}{current_file_cracked_hashes}{Back.RESET}")
+                display(':', f"Total Cracked Hashes = {Back.MAGENTA}{len(cracked_hashes)}{Back.RESET}")
+                if len(cracked_hashes) == len(hashes):
+                    display('+', f"Done Cracking all the Hashes!")
+                    break
         except:
             display('-', f"Error while reading File {Back.YELLOW}{wordlist}{Back.RESET}")
             continue
