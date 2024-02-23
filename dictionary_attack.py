@@ -100,7 +100,7 @@ if __name__ == "__main__":
                         word = file.readline().decode(errors="ignore")
                         if word == '':
                             done = True
-                        word = word.replace('\n', '')
+                        word = word.replace('\n', '').replace('\r', '')
                         words[hash_algorithms[data.hashing_algorithm](word.encode()).hexdigest()] = word
                         current_words_loaded += 1
                         display('*', f"Hashes Calculated = {Back.MAGENTA}{current_words_loaded}{Back.RESET}", start='\r', end='')
@@ -119,10 +119,11 @@ if __name__ == "__main__":
                             current_cracked_hashes += 1
                         display(':', f"Hashes Compared = {Back.MAGENTA}{hash_index+1}/{len(hashes)} ({(hash_index+1)/len(hashes)*100:.2f}%){Back.RESET}", start='\r', end='')
                     t2 = time()
+                    current_file_cracked_hashes += current_cracked_hashes
                     display('+', "Done Comparing Hashes", start='\n')
                     display(':', f"\tTime Taken = {Back.MAGENTA}{t2-t1:.2f}{Back.RESET} seconds")
                     display(':', f"\tHashes Cracked from Current Batch = {Back.MAGENTA}{current_cracked_hashes}{Back.RESET}")
-                    current_file_cracked_hashes += current_cracked_hashes
+                    display(':', f"\tHashes Cracked from Current File  = {Back.MAGENTA}{current_file_cracked_hashes}{Back.RESET}")
                 display(':', f"\tHashes Cracked from Current file = {Back.MAGENTA}{current_file_cracked_hashes}{Back.RESET}")
                 display(':', f"Total Cracked Hashes = {Back.MAGENTA}{len(cracked_hashes)}{Back.RESET}")
                 if len(cracked_hashes) == len(hashes):
