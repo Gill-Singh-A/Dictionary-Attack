@@ -6,6 +6,7 @@ from datetime import date
 from optparse import OptionParser
 from colorama import Fore, Back, Style
 from time import strftime, localtime, time
+from multiprocessing import Lock, Pool, cpu_count
 
 status_color = {
     '+': Fore.GREEN,
@@ -36,7 +37,27 @@ hash_algorithms = {
     "sha3_512" : hashlib.sha3_512,
     "sha512" : hashlib.sha512,
 }
-number_of_hashes = 10000000
+number_of_hashes = 100000000
+
+def calculateHashes(words, algorithm):
+    hashes = {}
+    for word in words:
+        hashes[hash_algorithms[algorithm](word.encode()).hexdigest()] = word
+    return hashes
+def HashingHandler(words, algorithm):
+    threads = []
+    hashes = {}
+    thread_count = cpu_count()
+    word_count = len(words)
+    pool = Pool(thread_count)
+    word_divisions = [words[group*word_count//thread_count: (group+1)*word_count//thread_count] for group in range(thread_count)]
+    for word_division in word_divisions:
+        threads.append(pool.apply_async(calculateHashes, (word_division, algorithm)))
+    for thread in threads:
+        hashes.update(thread.get())
+    pool.close()
+    pool.join()
+    return hashes
 
 if __name__ == "__main__":
     data = get_arguments(('-l', "--load", "load", "List of Wordlists (seperated by ',')"),
@@ -80,7 +101,7 @@ if __name__ == "__main__":
         try:
             display(':', f"Loading File {Back.MAGENTA}{file_index+1}/{len(wordlists)} => {wordlist}{Back.RESET}", start='\n')
             with open(wordlist, 'rb') as file:
-                words = file.read().decode(errors="ignore").split('\n')
+                words = [word.replace('\r', '') for word in file.read().decode(errors="ignore").split('\n')]
         except FileNotFoundError:
             display('-', f"File {Back.YELLOW}{wordlist}{Back.RESET} not found!")
             continue
@@ -93,19 +114,23 @@ if __name__ == "__main__":
                 current_file_cracked_hashes = 0
                 while not done:
                     current_words_loaded = 0
-                    words = {}
-                    current_hashes = {}
+                    words = []
                     t1 = time()
                     while len(words) < data.number_of_hashes and not done:
                         word = file.readline().decode(errors="ignore")
                         if word == '':
                             done = True
-                        word = word.replace('\n', '').replace('\r', '')
-                        words[hash_algorithms[data.hashing_algorithm](word.encode()).hexdigest()] = word
+                        words.append(word.replace('\n', '').replace('\r', ''))
                         current_words_loaded += 1
-                        display('*', f"Hashes Calculated = {Back.MAGENTA}{current_words_loaded}{Back.RESET}", start='\r', end='')
-                    t2 = time()
                     words_loaded += current_words_loaded
+                    t2 = time()
+                    display('+', f"Loaded {Back.MAGENTA}{data.number_of_hashes}{Back.RESET} words from the file.")
+                    display(':', f"\tTime Taken = {Back.MAGENTA}{t2-t1:.2f} seconds{Back.RESET}")
+                    display(':', f"\tRate = {Back.MAGENTA}{current_words_loaded/(t2-t1):.2f} words/second{Back.RESET}")
+                    display(':', "Calculating Hashes")
+                    t1 = time()
+                    words = HashingHandler(words, data.hashing_algorithm)
+                    t2 = time()
                     display('+', "Done Calculating Hashes", start='\n')
                     display(':', f"\tHashes Calculated = {Back.MAGENTA}{current_words_loaded}{Back.RESET}")
                     display(':', f"\tTime Taken = {Back.MAGENTA}{t2-t1:.2f} seconds{Back.RESET}")
@@ -117,7 +142,6 @@ if __name__ == "__main__":
                         if hash in words.keys():
                             cracked_hashes[hash] = words[hash]
                             current_cracked_hashes += 1
-                        display(':', f"Hashes Compared = {Back.MAGENTA}{hash_index+1}/{len(hashes)} ({(hash_index+1)/len(hashes)*100:.2f}%){Back.RESET}", start='\r', end='')
                     t2 = time()
                     current_file_cracked_hashes += current_cracked_hashes
                     display('+', "Done Comparing Hashes", start='\n')
@@ -133,12 +157,9 @@ if __name__ == "__main__":
             display('-', f"Error while reading File {Back.YELLOW}{wordlist}{Back.RESET}")
             continue
         display('+', f"Words Loaded = {Back.MAGENTA}{len(words)}{Back.RESET}")
-        current_hashes = {}
         display(':', f"Calculating Hashes...")
         t1 = time()
-        for word_index, word in enumerate(words):
-            current_hashes[hash_algorithms[data.hashing_algorithm](word.encode()).hexdigest()] = word
-            display('*', f"Hashes Calculated = {Back.MAGENTA}{word_index+1}/{len(words)} ({(word_index+1)/len(words)*100:.2f}%){Back.RESET}", start='\r', end='')
+        current_hashes = HashingHandler(words, data.hashing_algorithm)
         t2 = time()
         hashes_calculated += len(words)
         display('+', "Done Calculating Hashes", start='\n')
