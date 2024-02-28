@@ -153,6 +153,7 @@ if __name__ == "__main__":
                 if len(cracked_hashes) == len(hashes):
                     display('+', f"Done Cracking all the Hashes!")
                     break
+            continue
         except:
             display('-', f"Error while reading File {Back.YELLOW}{wordlist}{Back.RESET}")
             continue
